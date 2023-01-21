@@ -1,22 +1,89 @@
-import fs from 'fs'
-import readLine from 'readline'
+import fs from 'fs';
+import path from 'path';
+import inquirer from 'inquirer';
 
-const readStream = fs.createReadStream('./src/access_tmp.log.txt', 'utf-8');
+let currentDirectory = process.cwd();
 
-const firstOutStream = fs.createWriteStream('./src/89.123.1.41_requests.log');
-const secondOutStream = fs.createWriteStream('./src/34.48.240.111_requests.log');
-const trashOutStream = fs.createWriteStream('./src/other_IP_requests.log');
+inquirer
+    .prompt([
+        {
+            name: 'changeDir',
+            type: 'confirm',
+            message: `Остаться в текущей директории? ${currentDirectory}`,
+        },
+    ])
+    .then((answer) => {
+        if (answer.changeDir) {
+            cdf(currentDirectory);
+        } else {
+            inquirer
+                .prompt([
+                    {
+                        name: 'dirPath',
+                        type: 'input',
+                        message: 'Введите желаемую директорию:',
+                    },
+                ])
+                .then((answer) => {
+                    currentDirectory = getPath(answer.dirPath);
+                    cdf(currentDirectory);
+                });
+        }
+    });
 
-const rl = readLine.createInterface({
-  input: readStream,
-});
+function ls(paths) {
+    return fs.readdirSync(paths);
+}
 
-rl.on('line', (line) => {
-  if(line.includes('89.123.1.41')) {
-    firstOutStream.write(line + '\n');
-  } else if (line.includes('34.48.240.111')) {
-    secondOutStream.write(line + '\n');
-  } else {
-    trashOutStream.write(line + '\n');
-  }
-})
+function isFile(name) {
+    return fs.lstatSync(getPath(name)).isFile();
+}
+
+function getPath(name) {
+    return path.resolve(currentDirectory, name);
+}
+
+function cdf(paths) {
+    inquirer
+        .prompt([
+            {
+                name: 'fileName',
+                type: 'list',
+                message: 'Выберите файл или папку:',
+                choices: ls(paths),
+            },
+        ])
+        .then((answer) => {
+            if (isFile(answer.fileName)) {
+                inquirer
+                    .prompt([
+                        {
+                            name: 'pattern',
+                            type: 'input',
+                            message: 'Введите регулярное выражение без флагов и слешей:',
+                        },
+                    ])
+                    .then((finder) => {
+                        if (!finder.pattern) {
+                            console.log(
+                                `Вы не ввели регулярное выражение! Читаем файл ${answer.fileName}`
+                            );
+                            fs.readFile(getPath(answer.fileName), 'utf8', (err, data) => {
+                                console.log(data);
+                            });
+                        } else {
+                            fs.readFile(getPath(answer.fileName), 'utf8', (err, data) => {
+                                let result = data.match(new RegExp(finder.pattern, 'g'));
+                                console.log(data);
+                                result !== null
+                                    ? console.log(`Найдено ${result.length} совпадений`)
+                                    : console.log('Совпадений не найдено!');
+                            });
+                        }
+                    });
+            } else {
+                currentDirectory = getPath(answer.fileName);
+                cdf(currentDirectory);
+            }
+        });
+}
