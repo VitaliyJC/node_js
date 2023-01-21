@@ -1,24 +1,25 @@
 {
-  "name": "nodejs",
+  "name": "nodeproject",
   "version": "1.0.0",
-  "description": "NodeJS",
+  "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/VitaliyJC/node_js.git"
+    "url": "git+https://github.com/Parallitik/NodeProject.git"
   },
-  "author": "Vitaliy",
-  "license": "ISC",
   "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "bugs": {
-    "url": "https://github.com/VitaliyJC/node_js/issues"
+    "url": "https://github.com/Parallitik/NodeProject/issues"
   },
-  "homepage": "https://github.com/VitaliyJC/node_js#readme",
+  "homepage": "https://github.com/Parallitik/NodeProject#readme",
   "dependencies": {
-    "colors": "^1.4.0"
+    "colors": "^1.4.0",
+    "inquirer": "^9.1.3"
   }
 }
