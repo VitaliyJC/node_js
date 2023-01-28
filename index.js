@@ -1,89 +1,46 @@
 import fs from 'fs';
-import path from 'path';
-import inquirer from 'inquirer';
+import path, { dirname, join } from 'path';
+import http from 'http';
+import url, { fileURLToPath } from 'url';
 
-let currentDirectory = process.cwd();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-inquirer
-    .prompt([
-        {
-            name: 'changeDir',
-            type: 'confirm',
-            message: `Остаться в текущей директории? ${currentDirectory}`,
-        },
-    ])
-    .then((answer) => {
-        if (answer.changeDir) {
-            cdf(currentDirectory);
-        } else {
-            inquirer
-                .prompt([
-                    {
-                        name: 'dirPath',
-                        type: 'input',
-                        message: 'Введите желаемую директорию:',
-                    },
-                ])
-                .then((answer) => {
-                    currentDirectory = getPath(answer.dirPath);
-                    cdf(currentDirectory);
-                });
-        }
-    });
+const isFile = (path) => fs.lstatSync(path).isFile();
 
-function ls(paths) {
-    return fs.readdirSync(paths);
-}
-
-function isFile(name) {
-    return fs.lstatSync(getPath(name)).isFile();
-}
-
-function getPath(name) {
-    return path.resolve(currentDirectory, name);
-}
-
-function cdf(paths) {
-    inquirer
-        .prompt([
-            {
-                name: 'fileName',
-                type: 'list',
-                message: 'Выберите файл или папку:',
-                choices: ls(paths),
-            },
-        ])
-        .then((answer) => {
-            if (isFile(answer.fileName)) {
-                inquirer
-                    .prompt([
-                        {
-                            name: 'pattern',
-                            type: 'input',
-                            message: 'Введите регулярное выражение без флагов и слешей:',
-                        },
-                    ])
-                    .then((finder) => {
-                        if (!finder.pattern) {
-                            console.log(
-                                `Вы не ввели регулярное выражение! Читаем файл ${answer.fileName}`
-                            );
-                            fs.readFile(getPath(answer.fileName), 'utf8', (err, data) => {
-                                console.log(data);
-                            });
-                        } else {
-                            fs.readFile(getPath(answer.fileName), 'utf8', (err, data) => {
-                                let result = data.match(new RegExp(finder.pattern, 'g'));
-                                console.log(data);
-                                result !== null
-                                    ? console.log(`Найдено ${result.length} совпадений`)
-                                    : console.log('Совпадений не найдено!');
-                            });
-                        }
-                    });
-            } else {
-                currentDirectory = getPath(answer.fileName);
-                cdf(currentDirectory);
+(async () => {
+    http
+        .createServer((request, response) => {
+            const filePath = join(
+                process.cwd(),
+                request.url.replace(/\[\.\.]/gi, '..')
+            );
+            if (!fs.existsSync(filePath)) {
+                return response.end('Not found');
             }
-        });
-}
+
+            if (isFile(filePath)) {
+                return fs.createReadStream(filePath, 'utf8').pipe(response);
+            }
+
+            const links = fs
+                .readdirSync(filePath)
+                .map((filename) => [join(request.url, filename), filename])
+                .map(
+                    ([filepath, filename]) =>
+                        `<li><a href="${filepath}">${filename}</a></li>`
+                )
+                .concat([`<li><a href="[..]/">..</a></li>`])
+                .join('');
+
+            const html = fs
+                .readFileSync(join(__dirname, 'index.html'), 'utf8')
+                .replace(/{{ content }}/gi, links);
+
+            response.writeHead(200, {
+                'Content-Type': 'text/html',
+            });
+            response.end(html);
+        })
+        .listen(8000);
+})();
