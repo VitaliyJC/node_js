@@ -1,5 +1,35 @@
-ul {
-    display: grid;
-    grid-template-columns: auto auto auto;
-    gap: 30px;
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.chat {
+    width: 600px;
+    display: flex;
+    gap: 20px;
+}
+
+#chat__users {
+    flex: 1;
+}
+
+#chat__messages {
+    flex: 2;
+}
+
+.user {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+#quit {
+    position: absolute;
+    right: 0;
+}
+
+.online {
+    color: red;
 }
